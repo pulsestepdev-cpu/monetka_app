@@ -4,30 +4,40 @@ const btn = document.getElementById('flipBtn');
 const soundYes = document.getElementById('soundYes');
 const soundNo = document.getElementById('soundNo');
 
+// Новые ресурсы для комбо
 const soundSpin = new Audio('assets/spinning.mp3');
+const soundSuper = new Audio('assets/super_win.mp3'); 
 soundSpin.loop = true;
 
 tg.expand();
 
 let currentRotation = 0;
 let isSpinning = false;
+let yesCount = 0; // Счетчик побед подряд
 
-// Настройки реакций
 const reactionGifs = ['assets/win1.gif', 'assets/win2.gif', 'assets/win3.gif'];
-const looseImage = 'assets/lose_test.png'; // ТВОЯ КАРТИНКА ДЛЯ "НЕТ"
+const looseImage = 'assets/lose_test.png';
+const superGif = 'assets/super_win.gif';
 
 btn.addEventListener('click', () => {
     if (isSpinning) return;
     
-    // Удаляем всё старое (и гифки, и фото)
+    // Сброс эффектов и старых медиа
     document.querySelectorAll('.reaction-media').forEach(el => el.remove());
+    coin.classList.remove('super-win-active');
     
     isSpinning = true;
     btn.disabled = true;
 
+    // Математика результата
     const isYes = Math.random() < 0.5; 
     
-    // Математика поворота (из прошлой версии)
+    if (isYes) {
+        yesCount++;
+    } else {
+        yesCount = 0; 
+    }
+
     let extraDegrees = isYes ? 0 : 180; 
     const newRotation = currentRotation + (3600 - (currentRotation % 360)) + extraDegrees;
     currentRotation = newRotation;
@@ -42,15 +52,21 @@ btn.addEventListener('click', () => {
         soundSpin.currentTime = 0;
         tg.HapticFeedback.notificationOccurred('success');
 
-        if (isYes === true) {
-            soundYes.play().catch(e => console.log("Sound error"));
-            // Выбираем рандомную гифку
-            const randomGif = reactionGifs[Math.floor(Math.random() * reactionGifs.length)];
-            showMedia(randomGif); 
+        if (isYes) {
+            if (yesCount >= 2) {
+                // ЛОГИКА СУПЕР-КОМБО
+                soundSuper.play().catch(e => console.log("Super sound error"));
+                coin.classList.add('super-win-active'); 
+                showMedia(superGif, true); 
+            } else {
+                // ОБЫЧНОЕ ДА
+                soundYes.play().catch(e => console.log("Sound error"));
+                showMedia(reactionGifs[Math.floor(Math.random() * reactionGifs.length)], false);
+            }
         } else {
+            // РЕЗУЛЬТАТ НЕТ
             soundNo.play().catch(e => console.log("Sound error"));
-            // ПОКАЗЫВАЕМ КАРТИНКУ ДЛЯ "НЕТ"
-            showMedia(looseImage); 
+            showMedia(looseImage, false);
         }
 
         isSpinning = false;
@@ -58,33 +74,31 @@ btn.addEventListener('click', () => {
     }, 4000);
 });
 
-// Универсальная функция для показа и гифок, и картинок
-function showMedia(src) {
+function showMedia(src, isSuper) {
     const media = document.createElement('img');
     media.className = 'reaction-media';
     media.src = src + '?nocache=' + Math.random();
     
     media.style.position = 'fixed';
-    media.style.width = '130px'; 
+    // Супер-гифку делаем чуть больше
+    media.style.width = isSuper ? '180px' : '130px'; 
     media.style.zIndex = '1000';
     media.style.borderRadius = '15px';
     media.style.pointerEvents = 'none'; 
     
-    // Рандомные координаты
-    const x = Math.random() * 60 + 10;
-    const y = Math.random() * 25 + 5;
+    const x = Math.random() * 50 + 15;
+    const y = Math.random() * 20 + 10;
     
     media.style.left = x + '%';
     media.style.top = y + '%';
     
     document.body.appendChild(media);
 
-    // Исчезновение через 2.5 секунды
     setTimeout(() => {
         media.style.opacity = '0';
         media.style.transition = 'opacity 0.5s ease';
         setTimeout(() => media.remove(), 500);
-    }, 2500);
+    }, isSuper ? 4000 : 2500); // Супер-гифка висит дольше
 }
 
 function triggerHapticSequence() {
