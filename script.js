@@ -4,7 +4,6 @@ const btn = document.getElementById('flipBtn');
 const soundYes = document.getElementById('soundYes');
 const soundNo = document.getElementById('soundNo');
 
-// Звук вращения
 const soundSpin = new Audio('assets/spinning.mp3');
 soundSpin.loop = true;
 
@@ -13,32 +12,41 @@ tg.expand();
 let currentRotation = 0;
 let isSpinning = false;
 
-// МАССИВ ГИФОК ДЛЯ "ДА"
 const reactionGifs = [
     'assets/win1.gif',
     'assets/win2.gif',
     'assets/win3.gif'
-    // Можешь добавлять сюда новые названия файлов через запятую
 ];
 
 btn.addEventListener('click', () => {
     if (isSpinning) return;
     
+    // Удаляем старые гифки перед началом
+    document.querySelectorAll('.reaction-gif').forEach(el => el.remove());
+    
     isSpinning = true;
     btn.disabled = true;
 
-    const isYes = Math.random() < 0.5; // Честный шанс 50/50
-    const extraDegrees = isYes ? 0 : 180; 
-    const spins = (Math.floor(Math.random() * 8) + 10) * 360; 
-    currentRotation += spins + extraDegrees;
+    // 1. Генерируем результат
+    const isYes = Math.random() < 0.5; 
+    
+    // 2. ЛОГИКА ВРАЩЕНИЯ:
+    // Нам нужно, чтобы монета всегда крутилась вперед.
+    // Прибавляем минимум 10 полных оборотов (3600 градусов)
+    let extraDegrees = isYes ? 0 : 180; 
+    
+    // Важный момент: чтобы не было рассинхрона, мы всегда докручиваем 
+    // до ближайшего нужного угла в зависимости от текущего положения.
+    const newRotation = currentRotation + (3600 - (currentRotation % 360)) + extraDegrees;
+    currentRotation = newRotation;
 
-    // Включаем звук и запускаем анимацию
+    console.log("Программный результат: " + (isYes ? "ДА" : "НЕТ"));
+
     soundSpin.play().catch(e => console.log("Sound error"));
     coin.style.transform = `rotateY(${currentRotation}deg)`;
 
     triggerHapticSequence();
 
-    // Ждем 4 секунды (время вращения в CSS)
     setTimeout(() => {
         finishFlip(isYes);
     }, 4000);
@@ -47,12 +55,11 @@ btn.addEventListener('click', () => {
 function finishFlip(isYes) {
     soundSpin.pause();
     soundSpin.currentTime = 0;
-
     tg.HapticFeedback.notificationOccurred('success');
     
     if (isYes === true) {
         soundYes.play().catch(e => console.log("Play error"));
-        showRandomGif(); // Показываем гифку только при "ДА"
+        showRandomGif(); 
     } else {
         soundNo.play().catch(e => console.log("Play error"));
     }
@@ -63,48 +70,35 @@ function finishFlip(isYes) {
 
 function showRandomGif() {
     if (reactionGifs.length === 0) return;
-
     const randomGifName = reactionGifs[Math.floor(Math.random() * reactionGifs.length)];
     const gif = document.createElement('img');
+    gif.className = 'reaction-gif';
+    gif.src = randomGifName + '?t=' + Date.now();
     
-    gif.src = randomGifName + '?' + Math.random();
-    
-    // Стили для размера и позиции (примерно 1/8 экрана)
-    gif.style.position = 'absolute';
+    gif.style.position = 'fixed';
     gif.style.width = '120px'; 
-    gif.style.zIndex = '100';
-    gif.style.borderRadius = '12px';
+    gif.style.zIndex = '1000';
+    gif.style.borderRadius = '15px';
     gif.style.pointerEvents = 'none'; 
     
-    // Рандом в верхней части экрана (чтобы не перекрывать кнопку "Погнали, сладенькая")
-    const x = Math.random() * 60 + 10; // от 10% до 70% ширины
-    const y = Math.random() * 15 + 5;  // от 5% до 20% высоты
-    
+    const x = Math.random() * 60 + 10;
+    const y = Math.random() * 20 + 10;
     gif.style.left = x + '%';
     gif.style.top = y + '%';
     
     document.body.appendChild(gif);
 
-    // Удаляем через 2.5 секунды с плавным исчезновением
     setTimeout(() => {
         gif.style.opacity = '0';
-        gif.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-        gif.style.transform = 'scale(0.5)';
+        gif.style.transition = 'opacity 0.5s ease';
         setTimeout(() => gif.remove(), 500);
     }, 2500);
 }
 
 function triggerHapticSequence() {
-    // Начальный толчок
     tg.HapticFeedback.notificationOccurred('warning');
-
-    // Мелкая вибрация "кручения"
     let hapticInterval = setInterval(() => {
         tg.HapticFeedback.impactOccurred('light');
     }, 150);
-
-    // Затихает чуть раньше остановки
-    setTimeout(() => {
-        clearInterval(hapticInterval);
-    }, 3000);
+    setTimeout(() => clearInterval(hapticInterval), 3000);
 }
