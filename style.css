@@ -62,6 +62,11 @@ body {
     cursor: pointer;
     z-index: 2;
     transition: transform 0.2s;
+    /* Убирает синее выделение при тапе на мобильных устройствах */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Дополнительно убирает контур при фокусе (для некоторых браузеров) */
+    outline: none;/* Убирает синее выделение при тапе на мобильных устройствах */
 }
 
 .btn-flip:active { transform: scale(0.95); }
