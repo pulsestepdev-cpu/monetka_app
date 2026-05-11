@@ -12,35 +12,25 @@ tg.expand();
 let currentRotation = 0;
 let isSpinning = false;
 
-const reactionGifs = [
-    'assets/win1.gif',
-    'assets/win2.gif',
-    'assets/win3.gif'
-];
+// Настройки реакций
+const reactionGifs = ['assets/win1.gif', 'assets/win2.gif', 'assets/win3.gif'];
+const looseImage = 'assets/lose_test.png'; // ТВОЯ КАРТИНКА ДЛЯ "НЕТ"
 
 btn.addEventListener('click', () => {
     if (isSpinning) return;
     
-    // Удаляем старые гифки перед началом
-    document.querySelectorAll('.reaction-gif').forEach(el => el.remove());
+    // Удаляем всё старое (и гифки, и фото)
+    document.querySelectorAll('.reaction-media').forEach(el => el.remove());
     
     isSpinning = true;
     btn.disabled = true;
 
-    // 1. Генерируем результат
     const isYes = Math.random() < 0.5; 
     
-    // 2. ЛОГИКА ВРАЩЕНИЯ:
-    // Нам нужно, чтобы монета всегда крутилась вперед.
-    // Прибавляем минимум 10 полных оборотов (3600 градусов)
+    // Математика поворота (из прошлой версии)
     let extraDegrees = isYes ? 0 : 180; 
-    
-    // Важный момент: чтобы не было рассинхрона, мы всегда докручиваем 
-    // до ближайшего нужного угла в зависимости от текущего положения.
     const newRotation = currentRotation + (3600 - (currentRotation % 360)) + extraDegrees;
     currentRotation = newRotation;
-
-    console.log("Программный результат: " + (isYes ? "ДА" : "НЕТ"));
 
     soundSpin.play().catch(e => console.log("Sound error"));
     coin.style.transform = `rotateY(${currentRotation}deg)`;
@@ -48,50 +38,52 @@ btn.addEventListener('click', () => {
     triggerHapticSequence();
 
     setTimeout(() => {
-        finishFlip(isYes);
+        soundSpin.pause();
+        soundSpin.currentTime = 0;
+        tg.HapticFeedback.notificationOccurred('success');
+
+        if (isYes === true) {
+            soundYes.play().catch(e => console.log("Sound error"));
+            // Выбираем рандомную гифку
+            const randomGif = reactionGifs[Math.floor(Math.random() * reactionGifs.length)];
+            showMedia(randomGif); 
+        } else {
+            soundNo.play().catch(e => console.log("Sound error"));
+            // ПОКАЗЫВАЕМ КАРТИНКУ ДЛЯ "НЕТ"
+            showMedia(looseImage); 
+        }
+
+        isSpinning = false;
+        btn.disabled = false;
     }, 4000);
 });
 
-function finishFlip(isYes) {
-    soundSpin.pause();
-    soundSpin.currentTime = 0;
-    tg.HapticFeedback.notificationOccurred('success');
+// Универсальная функция для показа и гифок, и картинок
+function showMedia(src) {
+    const media = document.createElement('img');
+    media.className = 'reaction-media';
+    media.src = src + '?nocache=' + Math.random();
     
-    if (isYes === true) {
-        soundYes.play().catch(e => console.log("Play error"));
-        showRandomGif(); 
-    } else {
-        soundNo.play().catch(e => console.log("Play error"));
-    }
-
-    isSpinning = false;
-    btn.disabled = false;
-}
-
-function showRandomGif() {
-    if (reactionGifs.length === 0) return;
-    const randomGifName = reactionGifs[Math.floor(Math.random() * reactionGifs.length)];
-    const gif = document.createElement('img');
-    gif.className = 'reaction-gif';
-    gif.src = randomGifName + '?t=' + Date.now();
+    media.style.position = 'fixed';
+    media.style.width = '130px'; 
+    media.style.zIndex = '1000';
+    media.style.borderRadius = '15px';
+    media.style.pointerEvents = 'none'; 
     
-    gif.style.position = 'fixed';
-    gif.style.width = '120px'; 
-    gif.style.zIndex = '1000';
-    gif.style.borderRadius = '15px';
-    gif.style.pointerEvents = 'none'; 
-    
+    // Рандомные координаты
     const x = Math.random() * 60 + 10;
-    const y = Math.random() * 20 + 10;
-    gif.style.left = x + '%';
-    gif.style.top = y + '%';
+    const y = Math.random() * 25 + 5;
     
-    document.body.appendChild(gif);
+    media.style.left = x + '%';
+    media.style.top = y + '%';
+    
+    document.body.appendChild(media);
 
+    // Исчезновение через 2.5 секунды
     setTimeout(() => {
-        gif.style.opacity = '0';
-        gif.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => gif.remove(), 500);
+        media.style.opacity = '0';
+        media.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => media.remove(), 500);
     }, 2500);
 }
 
